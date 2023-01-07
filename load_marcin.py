@@ -2,12 +2,13 @@ import tensorflow as tf
 import os
 import re
 import numpy as np
-import random
+from PIL import Image
+import matplotlib.pyplot as plt
 
-DIRECTORY = "good_imgs/"
+GOOD_DIRECTORY = "good_imgs/"
+BAD_DIRECTORY  = "bad_format_images/"
 GOOD = 1
 BAD = 0
-files = os.listdir(DIRECTORY)
 
 def augment(image, label):
   image = tf.expand_dims(image, axis=-1)
@@ -15,40 +16,17 @@ def augment(image, label):
   image = tf.image.random_contrast(image, 0.2, 0.5)
   image = tf.image.random_flip_left_right(image)
   image = tf.image.random_flip_up_down(image)
-  image = tf.image.random_brightness(image, max_delta=0.5)
+  image = tf.image.random_brightness(image, max_delta=0.5)  
 
-def make_bad_resolution(img_tensor, width, height, mul):
-    pixels = width*height
-
-    new_heights = []
-
-    for i in range(1, pixels+1):
-        if pixels % i == 0:
-            new_heights.append(i)
-
-    new_heights.remove(height)
-
-    new_widths = []
-    for i in range(len(new_heights)):
-        new_widths.append(int(pixels / new_heights[i]))
-    
-    middleIndex = (len(new_widths) - 1)/2
-    new_widths = new_widths[int(middleIndex)-3 : int(middleIndex)+3]
-
-
-    new_width = int(random.choice(new_widths))
-    new_height = int(pixels/new_width)
-    #tensor = tf.reshape(img_tensor, (new_width*mul, new_height))
-
-    return tensor
+files = os.listdir(GOOD_DIRECTORY)
 
 i = 1
 tensor_list = []
 label_list = []
 
-#####LOADING THE DATA#####################################################################
+#####LOADING THE GOOD DATA#####################################################################
 for file in files:
-    with open(DIRECTORY + file, 'rb') as f:
+    with open(GOOD_DIRECTORY + file, 'rb') as f:
         #print(i) # To check progress - approx 24000 imgs
         raw_bytes = f.read()
         match = re.search(r"_(?P<width>\d+)x(?P<height>\d+)_(?P<format>\w+)\.", file)
@@ -89,32 +67,50 @@ for file in files:
         tensor = tf.io.decode_raw(raw_bytes, tf.uint8)
         tensor = tf.reshape(tensor, (width*mul,height))
         tensor = tf.expand_dims(tensor, axis=-1)
-        bad_tensor = make_bad_resolution(tensor, width, height, mul)
-        bad_tensor = tf.expand_dims(tensor, axis=-1)
-
-
-        
-    
+            
         ## HERE ADD CROP OR RESIZE TO MAKE TENSORS MATCH
         tensor = tf.image.resize(tensor, [256,256])
-        bad_tensor = tf.image.resize(tensor, [256,256])
+
 
     ################################################################################
 
         ## Append label
         tensor_list.append(tensor)
         label_list.append(GOOD)
-        tensor_list.append(bad_tensor)
-        label_list.append(BAD)
+        break
+        
+
+#####LOADING THE BAD DATA#####################################################################
+j = 0
+files = os.listdir(BAD_DIRECTORY)
+for file in files:
+    j = j +1
+    image_string = open(BAD_DIRECTORY + file, 'rb').read()
+########## WORK ON SINGLE TENSOR ###############################################
+
+    bad_tensor = tf.io.decode_image(image_string, channels=1, dtype=tf.uint8)
+    
+    ## HERE ADD CROP OR RESIZE TO MAKE TENSORS MATCH
+    bad_tensor = tf.image.resize(bad_tensor, [256,256])
+
+################################################################################
+
+    ## Append label
+    tensor_list.append(bad_tensor)
+    label_list.append(BAD)
 
 
-print(tensor_list)
+        
+
+
 ########CONSTS#####################################################
 BATCH_SIZE = 64
 
 dataset = tf.data.Dataset.from_tensor_slices((tensor_list,label_list))
 #dataset = dataset.batch(BATCH_SIZE)
 
+
 #example 
 #for img, label in dataset:
+    
  
