@@ -77,7 +77,6 @@ for file in files:
         ## Append label
         tensor_list.append(tensor)
         label_list.append(GOOD)
-        break
         
 
 #####LOADING THE BAD DATA#####################################################################
